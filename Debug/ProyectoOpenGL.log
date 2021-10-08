@@ -1,0 +1,13 @@
+﻿main.obj : error LNK2019: unresolved external symbol __imp__glClear@4 referenced in function _main
+main.obj : error LNK2019: unresolved external symbol __imp__glClearColor@16 referenced in function _main
+main.obj : error LNK2019: unresolved external symbol __imp__glfwInit referenced in function _main
+main.obj : error LNK2019: unresolved external symbol __imp__glfwTerminate referenced in function _main
+main.obj : error LNK2019: unresolved external symbol __imp__glfwCreateWindow referenced in function _main
+main.obj : error LNK2019: unresolved external symbol __imp__glfwWindowShouldClose referenced in function _main
+main.obj : error LNK2019: unresolved external symbol __imp__glfwPollEvents referenced in function _main
+main.obj : error LNK2019: unresolved external symbol __imp__glfwMakeContextCurrent referenced in function _main
+main.obj : error LNK2019: unresolved external symbol __imp__glfwSwapBuffers referenced in function _main
+C:\Users\aleja\Documents\BecarioVR\ProyectoOpenGL\ProyectoOpenGL\\GLFW\lib\glfw3_mt.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'x86'
+C:\Users\aleja\Documents\BecarioVR\ProyectoOpenGL\ProyectoOpenGL\\GLFW\lib\glfw3dll.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'x86'
+C:\Users\aleja\Documents\BecarioVR\ProyectoOpenGL\ProyectoOpenGL\\GLFW\lib\glfw3.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'x86'
+C:\Users\aleja\Documents\BecarioVR\ProyectoOpenGL\ProyectoOpenGL\Debug\ProyectoOpenGL.exe : fatal error LNK1120: 9 unresolved externals
