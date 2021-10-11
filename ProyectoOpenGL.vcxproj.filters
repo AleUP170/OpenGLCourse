@@ -35,5 +35,11 @@
     <None Include="Shaders\mixTexture.fs">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\transform.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\transform.vs">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

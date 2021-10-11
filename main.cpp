@@ -15,13 +15,30 @@
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
-// Variables movimiento
-float movX(0), movY(0), movZ(0);
+// Movement variables
+float movX = 0, movY = 0, movZ = 0;
+
+// Camera variables
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, 1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+float cameraSpeed = 3.0f;
+
+// Mouse Camera
+bool firstMouse = true;
+float lastX = 0, lastY = 0;
+float sensitivity = 0.03f;
+float yaw, pitch;
+
+// Time variables
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
 
 int main()
 {
@@ -46,6 +63,9 @@ int main()
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    // Mouse input
+    glfwSetCursorPosCallback(window, mouse_callback);
+
     // glad: load all OpenGL function pointers
     // ---------------------------------------
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -61,55 +81,17 @@ int main()
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     float vertices[] = {
-        // positions          // texture coords
-        
-         0.5f,  0.5f, 0.5f,   1.0f, 0.0f, // 0
-         0.5f, -0.5f, 0.5f,   1.0f, 1.0f, // 1
-        -0.5f, -0.5f, 0.5f,   0.0f, 1.0f, // 2
-        -0.5f,  0.5f, 0.5f,   0.0f, 0.0f, // 3
-
-         0.5f,  0.5f, -0.5f,  0.0f, 0.0f, // 4
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // 5
-
-         0.5f,  0.5f, -0.5f,  0.0f, 0.0f, // 6
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // 7
-        -0.5f, -0.5f, -0.5f,  1.0f, 1.0f, // 8
-        -0.5f,  0.5f, -0.5f,  1.0f, 0.0f, // 9
-
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // 10
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // 11
-
-         0.5f, -0.5f, -0.5f,  1.0f, 0.0f, // 12
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // 13
-
-
-        // Para mostrar textura correctamente en las tapas
+        // positions         // Normals         // texture coords
+         0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 0.0f,  1.0f, 1.0f, // top right
+         0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 0.0f,  1.0f, 0.0f, // bottom right
+        -0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f, // bottom left
+        -0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 0.0f,  0.0f, 1.0f  // top left
     };
     unsigned int indices[] = {
-        // Frente
         0, 1, 3, // first triangle
-        1, 2, 3,  // second triangle
-
-        // Derecha
-        4, 5, 0,
-        5, 1, 0,
-
-        // Atrás
-        9, 8, 6,
-        8, 7, 6,
-
-        // Izquierda
-        3, 2, 9,
-        2, 8, 9,
-
-        // Arriba
-        10, 0, 11,
-        0, 3, 11,
-
-        // Abajo
-        1, 12, 2,
-        12, 13, 2,
+        1, 2, 3  // second triangle
     };
+
     unsigned int VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -124,11 +106,14 @@ int main()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     // texture coord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    // normal attribute
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
 
     // load and create a texture
@@ -187,23 +172,36 @@ int main()
     ourShader.use();
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
+
+    // Depth test
     glEnable(GL_DEPTH_TEST);
 
-    // Cámara
-    glm::mat4 view = glm::mat4(1.0f);
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -6.0f));
+    // Hiding mouse
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // Proyección
     glm::mat4 projection = glm::mat4(1.0f);
     projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
     // note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
     ourShader.setMat4("projection", projection);
+
+    // Valores para shaders
+    unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
+    unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
+    unsigned int normLoc = glGetUniformLocation(ourShader.ID, "normal");
+    unsigned int lposLoc = glGetUniformLocation(ourShader.ID, "lpos");
 
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
     {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // Delta Times
+        float currFrame = glfwGetTime();
+        deltaTime = currFrame - lastFrame;
+        lastFrame = currFrame;
+
         // input
         // -----
         processInput(window);
@@ -223,40 +221,36 @@ int main()
         ourShader.use();
 
         // create transformations
-        glm::mat4 model1 = glm::mat4(1.0f); // Cubo estático
-        glm::mat4 model2 = glm::mat4(1.0f); // Cubo rotando
-        glm::mat4 model3 = glm::mat4(1.0f); // Cubo moviéndose
+        glm::mat4 model = glm::mat4(1.0f); // Cubo estático
 
         // retrieve the matrix uniform locations
         unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
         unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
+
+        glm::mat4 view = glm::lookAt(cameraPos, cameraPos - cameraFront, cameraUp);
+
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
         glBindVertexArray(VAO);
 
-        // Dibuando modelo 1
-        model1 = glm::translate(model1, glm::vec3(-2.0f, 0.0f, 0.0f));
-        model1 = glm::rotate(model1, glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        // Pasando al shader
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model1));
-        // Render
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        // Light
+        glm::vec3 lPos = glm::vec3(0.5f, 0.7f, 0.0f);
 
-        // Dibujando modelo 2
-        model2 = glm::rotate(model2, glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        model2 = glm::rotate(model2, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-        // Pasando al shader
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model2));
-        // Render
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        // First model
+        model = glm::rotate(model, glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+        // Normal del modelo
+        glm::mat3 normal = glm::mat3(1.0);
+        normal = model;
+        normal = glm::transpose(glm::inverse(normal));
 
-        // Dibujando modelo 3
-        model3 = glm::translate(model3, glm::vec3(2.0f, 0.0f, 0.0f));
-        model3 = glm::rotate(model3, glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        model3 = glm::translate(model3, glm::vec3(movX, movY, movZ));
-        // Pasando al shader
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model3));
+        // Sending to shaders
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
+        glUniformMatrix4fv(normLoc, 1, GL_FALSE, glm::value_ptr(normal));
+        glUniform3fv(lposLoc, 1, glm::value_ptr(lPos));
+
         // Render
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -276,9 +270,6 @@ int main()
     return 0;
 }
 
-
-
-
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow* window)
@@ -286,17 +277,13 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        movY += 0.001f;
+        cameraPos -= cameraSpeed * cameraFront * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        movY -= 0.001f;
+        cameraPos += cameraSpeed * cameraFront * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        movX += 0.001f;
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        movX -= 0.001f;
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-        movZ += 0.001f;
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-        movZ -= 0.001f;
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -306,4 +293,35 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+
+    if (firstMouse) // initially set to true
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xOffset, yOffset;
+    xOffset = (xpos - lastX) * sensitivity;
+    yOffset = (lastY - ypos) * sensitivity;
+    lastX = xpos;
+    lastY = ypos;
+
+    yaw += xOffset;
+    pitch += yOffset;
+
+    // Limiting vertical angle
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    glm::vec3 direction;
+    direction.x = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    direction.y = sin(glm::radians(pitch));
+    direction.z = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(direction);
 }
