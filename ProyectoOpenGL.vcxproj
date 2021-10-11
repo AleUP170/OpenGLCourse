@@ -24,9 +24,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\mixTexture.fs" />
+    <None Include="Shaders\PointLight.fs" />
+    <None Include="Shaders\PointLightAtt.fs" />
+    <None Include="Shaders\SpotLight.fs" />
     <None Include="Shaders\texture.fs" />
     <None Include="Shaders\texture.vs" />
-    <None Include="Shaders\transform.fs" />
+    <None Include="Shaders\DirLight.fs" />
     <None Include="Shaders\transform.vs" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
