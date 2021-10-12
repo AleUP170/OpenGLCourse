@@ -35,5 +35,20 @@
     <None Include="Shaders\mixTexture.fs">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\transform.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\PointLight.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\DirLight.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\PointLightAtt.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\SpotLight.fs">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
