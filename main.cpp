@@ -33,8 +33,6 @@ float lastFrame = 0.0f; // Time of last frame
 float lastX = 400.0f, lastY = 300.0;
 float yaw = 270.0f, pitch = 0.0f;
 bool firstMouse = true;
-// Light vars
-int lightType = 3;
 
 
 int main()
@@ -46,7 +44,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    
+
 
     // glfw window creation
     // --------------------
@@ -77,78 +75,93 @@ int main()
 
     // build and compile our shader zprogram
     // ------------------------------------
-    Shader dirLight("./Shaders/transform.vs", "./Shaders/DirLight.fs");
-    Shader pointLight("./Shaders/transform.vs", "./Shaders/PointLight.fs");
-    Shader pointLightAtt("./Shaders/transform.vs", "./Shaders/PointLightAtt.fs");
-    Shader spotLight("./Shaders/transform.vs", "./Shaders/SpotLight.fs");
+    Shader ourShader("./Shaders/BumpParallaxLight.vs", "./Shaders/BumpParallaxLight.fs");
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     //+++++++++++++++++++++++++
+
+    // positions
+        glm::vec3 pos1(5.0f,  0.0f, 5.0f);
+        glm::vec3 pos2(-5.0f,  0.0f, 5.0f);
+        glm::vec3 pos3( -5.0f,  0.0f, -5.0f);
+        glm::vec3 pos4( 5.0f,  0.0f, -5.0f);
+        // texture coordinates
+        glm::vec2 uv1(2.0f, 2.0f);
+        glm::vec2 uv2(0.0f, 2.0f);
+        glm::vec2 uv3(0.0f, 0.0f);
+        glm::vec2 uv4(2.0f, 0.0f);
+        // normal vector
+        glm::vec3 nm(0.0f, 1.0f, 0.0f);
+
+        // calculate tangent/bitangent vectors of both triangles
+        glm::vec3 tangent1, bitangent1;
+        glm::vec3 tangent2, bitangent2;
+        // triangle 1
+        // ----------
+        glm::vec3 edge1 = pos2 - pos1;
+        glm::vec3 edge2 = pos3 - pos1;
+        glm::vec2 deltaUV1 = uv2 - uv1;
+        glm::vec2 deltaUV2 = uv3 - uv1;
+
+        float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+        bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+        bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+        bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+        // triangle 2
+        // ----------
+        edge1 = pos3 - pos1;
+        edge2 = pos4 - pos1;
+        deltaUV1 = uv3 - uv1;
+        deltaUV2 = uv4 - uv1;
+
+        f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        tangent2.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent2.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent2.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+
+        bitangent2.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+        bitangent2.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+        bitangent2.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+
+        glm::vec3 ctangent, cbitangent;
+        ctangent = tangent1 + tangent2;
+        cbitangent = bitangent1 + bitangent2;
+        ctangent = glm::normalize(ctangent);
+        cbitangent = glm::normalize(cbitangent);
+
+        float vertices[] = {
+            // positions            // normal         // texcoords  // tangent                          // bitangent
+            pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, ctangent.x, ctangent.y, ctangent.z, cbitangent.x, cbitangent.y, cbitangent.z,
+            pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv2.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+            pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent1.x, ctangent.y, ctangent.z, cbitangent.x, cbitangent.y, cbitangent.z,
+            pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+
+        };
+
     /*float vertices[] = {
         // positions                              // texture coords
-         0.5f,  0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // top right
-         0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   1.0f, 0.0f, // bottom right
-        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-        -0.5f,  0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 1.0f  // top left
-    };
-    unsigned int indices[] = {
-        0, 1, 3, // first triangle
-        1, 2, 3  // second triangle
+         5.0f,  0.0f, 5.0f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f, // top right
+        -5.0f,  0.0f, 5.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+        -5.0f,  0.0f, -5.0f,  0.0f, 1.0f, 0.0f,   0.0f, 0.0f, // bottom left
+         5.0f,  0.0f, -0.5f,  0.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
     };*/
 
-    float vertices[] = {
-        // positions                              // texture coords
-         0.5f,  0.5f, 0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, //0
-         0.5f, -0.5f, 0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 0.0f, //1
-        -0.5f, -0.5f, 0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, //2
-        -0.5f,  0.5f, 0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 1.0f,  //3
-
-         0.5f,  0.5f, -0.5f,   0.0f, 0.0f, -1.0f,   1.0f, 1.0f, //4
-         0.5f, -0.5f, -0.5f,   0.0f, 0.0f, -1.0f,   1.0f, 0.0f, //5
-        -0.5f, -0.5f, -0.5f,   0.0f, 0.0f, -1.0f,   0.0f, 0.0f, //6
-        -0.5f,  0.5f, -0.5f,   0.0f, 0.0f, -1.0f,   0.0f, 1.0f,  //7
-
-         0.5f,  0.5f, 0.5f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, //8
-         0.5f, -0.5f, 0.5f,   1.0f, 0.0f, 0.0f,   1.0f, 0.0f, //9
-        0.5f, -0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f, //10
-        0.5f,  0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   0.0f, 1.0f, //11
-
-         -0.5f,  0.5f, 0.5f,   -1.0f, 0.0f, 0.0f,   1.0f, 1.0f, //12
-         -0.5f, -0.5f, 0.5f,   -1.0f, 0.0f, 0.0f,   1.0f, 0.0f, //13
-        -0.5f, -0.5f, -0.5f,   -1.0f, 0.0f, 0.0f,   0.0f, 0.0f, //14
-        -0.5f,  0.5f, -0.5f,   -1.0f, 0.0f, 0.0f,   0.0f, 1.0f, //15
-
-        -0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f, //16
-        -0.5f,  0.5f, 0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, //17
-        0.5f,  0.5f, 0.5f,    0.0f, 1.0f, 0.0f,   0.0f, 0.0f, //18
-        0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f,  //19
-
-        0.5f, -0.5f, -0.5f,   0.0f, -1.0f, 0.0f,   1.0f, 1.0f, //20
-        0.5f, -0.5f, 0.5f,   0.0f, -1.0f, 0.0f,   1.0f, 0.0f, //21
-        -0.5f, -0.5f, 0.5f,    0.0f, -1.0f, 0.0f,   0.0f, 0.0f, //22
-        -0.5f, -0.5f, -0.5f,   0.0f, -1.0f, 0.0f,   0.0f, 1.0f  //23
 
 
-    };
+
     unsigned int indices[] = {
-        0, 1, 3, // first triangle
-        1, 2, 3,  // second triangle
-
-        4, 5, 6,
-        7, 4, 6,
-
-        8, 9, 10,
-        8, 10, 11,
-
-        12, 13, 14,
-        12, 14, 15,
-
-        16, 17, 18,
-        16, 18, 19,
-
-        20, 21, 22,
-        20, 22, 23,
+        0, 1, 2, // first triangle
+        0, 2, 3  // second triangle
     };
 
 
@@ -166,21 +179,29 @@ int main()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
     // normal attribute
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
     // texture coord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(1);
+
+    // tangent attribute
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(8 * sizeof(float)));
+    glEnableVertexAttribArray(3);
+
+    // bitangent attribute
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
+    glEnableVertexAttribArray(4);
 
 
     // load and create a texture
     // -------------------------
-    unsigned int texture1, texture2;
+    unsigned int texture1, texture2, texture3;
     // texture 1
     // ---------
     glGenTextures(1, &texture1);
@@ -189,12 +210,12 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load image, create texture and generate mipmaps
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-    unsigned char *data = stbi_load("./Resources/Textures/doom_base.jpg", &width, &height, &nrChannels, 0);
+    unsigned char *data = stbi_load("./Resources/Textures/rockwall.png", &width, &height, &nrChannels, 0);
     if (data)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -205,6 +226,7 @@ int main()
         std::cout << "Failed to load texture" << std::endl;
     }
     stbi_image_free(data);
+
     // texture 2
     // ---------
     glGenTextures(1, &texture2);
@@ -213,14 +235,37 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load image, create texture and generate mipmaps
-    data = stbi_load("./Resources/Textures/nier.png", &width, &height, &nrChannels, 0);
+    data = stbi_load("./Resources/Textures/rockwall_height.png", &width, &height, &nrChannels, 0);
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
+
+    // texture 3
+    // ---------
+    glGenTextures(1, &texture3);
+    glBindTexture(GL_TEXTURE_2D, texture3);
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // load image, create texture and generate mipmaps
+    data = stbi_load("./Resources/Textures/rockwall_normal.png", &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
     else
@@ -231,41 +276,15 @@ int main()
 
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
+    ourShader.use();
+    ourShader.setInt("texture1", 0);
+    ourShader.setInt("texture2", 1);
+    ourShader.setInt("texture3", 2);
 
+    // note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
     glm::mat4 projection = glm::mat4(1.0f);
     projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-
-    switch (lightType)
-    {
-    case 0:
-        dirLight.use();
-        dirLight.setInt("texture1", 0);
-        dirLight.setInt("texture2", 1);
-        dirLight.setMat4("projection", projection);
-        break;
-    case 1:
-        pointLight.use();
-        pointLight.setInt("texture1", 0);
-        pointLight.setInt("texture2", 1);
-        pointLight.setMat4("projection", projection);
-        break;
-    case 2:
-        pointLightAtt.use();
-        pointLightAtt.setInt("texture1", 0);
-        pointLightAtt.setInt("texture2", 1);
-        pointLightAtt.setMat4("projection", projection);
-        break;
-    case 3:
-        spotLight.use();
-        spotLight.setInt("texture1", 0);
-        spotLight.setInt("texture2", 1);
-        spotLight.setMat4("projection", projection);
-        break;
-    default:
-        break;
-    }
-    
-    float accrot = 0.0f;
+    ourShader.setMat4("projection", projection);
 
     // render loop
     // -----------
@@ -277,7 +296,7 @@ int main()
 
         // render
         // ------
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!
 
         // bind textures on corresponding texture units
@@ -285,201 +304,57 @@ int main()
         glBindTexture(GL_TEXTURE_2D, texture1);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, texture3);
 
         // activate shader
-        switch (lightType)
-        {
-        case 0:
-            dirLight.use();
-            break;
-        case 1:
-            pointLight.use();
-            break;
-        case 2:
-            pointLightAtt.use();
-            break;
-        case 3:
-            spotLight.use();
-            break;
-        default:
-            break;
-        }
+        ourShader.use();
 
         // create transformations
         glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
         glm::mat4 view          = glm::mat4(1.0f);
         glm::mat3 normal        = glm::mat3(1.0f);
-        glm::vec4 lPos          = glm::vec4(0.0f, 0.0f, 0.0f, 1.0);
-        // Point light
-        glm::vec3 coeffs        = glm::vec3(1.0f, 0.35f, 0.44f);
-        // Directional light
-        glm::vec3 lVec          = glm::vec3(0.0f, 0.0f, 1.0f);
+
         // Spotlight
-        glm::vec3 spotDir       = glm::vec3(0.0f, 0.0f, 1.0f);
+        glm::vec4 lPos          = glm::vec4(0.0f, 2.0f, 0.0f, 1.0);
+        glm::vec3 coeffs        = glm::vec3(1.0f, 0.01f, 0.001f);
+        glm::vec3 spotDir       = glm::vec3(0.0f, 1.0f, 0.5f);
         glm::vec2 spotCoeffs    = glm::vec2(20.0f, 30.0f);
 
-        view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        model = glm::translate(model, glm::vec3(0.0f, -3.0f, 0.0f));
+
+
+        normal[0][0] = model[0][0]; normal[0][1] = model[0][1]; normal[0][2] = model[0][2];
+        normal[1][0] = model[1][0]; normal[1][1] = model[1][1]; normal[1][2] = model[1][2];
+        normal[2][0] = model[2][0]; normal[2][1] = model[2][1]; normal[2][2] = model[2][2];
+        normal = glm::transpose(glm::inverse(normal));
+
+        //view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
         view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-        unsigned int lposLoc;
-        unsigned int lvecLoc;
-        unsigned int coeffsLoc;
-        unsigned int cposLoc;
-        unsigned int viewLoc;
-        unsigned int modelLoc;
-        unsigned int normLoc;
-        unsigned int spotCoeffsLoc;
-        unsigned int spotDirLoc;
-
-
-        //glUniform4fv(lposLoc, 1, glm::value_ptr(lPos));
-
-        switch (lightType) {
-        case 0:
-            cposLoc = glGetUniformLocation(dirLight.ID, "cpos");
-            viewLoc = glGetUniformLocation(dirLight.ID, "view");
-            modelLoc = glGetUniformLocation(dirLight.ID, "model");
-            normLoc = glGetUniformLocation(dirLight.ID, "normal");
-            lvecLoc = glGetUniformLocation(dirLight.ID, "lvec");
-            glUniform3fv(lvecLoc, 1, glm::value_ptr(lVec));
-            break;
-        case 1:
-            cposLoc = glGetUniformLocation(pointLight.ID, "cpos");
-            viewLoc = glGetUniformLocation(pointLight.ID, "view");
-            modelLoc = glGetUniformLocation(pointLight.ID, "model");
-            normLoc = glGetUniformLocation(pointLight.ID, "normal");
-            lvecLoc = glGetUniformLocation(pointLight.ID, "lvec");
-            lposLoc = glGetUniformLocation(pointLight.ID, "lpos");
-            glUniform4fv(lposLoc, 1, glm::value_ptr(lPos));
-            break;
-        case 2:
-            cposLoc = glGetUniformLocation(pointLightAtt.ID, "cpos");
-            viewLoc = glGetUniformLocation(pointLightAtt.ID, "view");
-            modelLoc = glGetUniformLocation(pointLightAtt.ID, "model");
-            normLoc = glGetUniformLocation(pointLightAtt.ID, "normal");
-            lvecLoc = glGetUniformLocation(pointLightAtt.ID, "lvec");
-            lposLoc = glGetUniformLocation(pointLightAtt.ID, "lpos");
-            coeffsLoc = glGetUniformLocation(pointLightAtt.ID, "coeffs");
-            glUniform4fv(lposLoc, 1, glm::value_ptr(lPos));
-            glUniform3fv(coeffsLoc, 1, glm::value_ptr(coeffs));
-            break;
-        case 3:
-            cposLoc = glGetUniformLocation(spotLight.ID, "cpos");
-            viewLoc = glGetUniformLocation(spotLight.ID, "view");
-            modelLoc = glGetUniformLocation(spotLight.ID, "model");
-            normLoc = glGetUniformLocation(spotLight.ID, "normal");
-            lvecLoc = glGetUniformLocation(spotLight.ID, "lvec");
-            lposLoc = glGetUniformLocation(spotLight.ID, "lpos");
-            coeffsLoc = glGetUniformLocation(spotLight.ID, "coeffs");
-            spotDirLoc = glGetUniformLocation(spotLight.ID, "ldir");
-            spotCoeffsLoc = glGetUniformLocation(spotLight.ID, "coeffsSpot");
-            glUniform4fv(lposLoc, 1, glm::value_ptr(lPos));
-            glUniform3fv(coeffsLoc, 1, glm::value_ptr(coeffs));
-            glUniform2fv(spotCoeffsLoc, 1, glm::value_ptr(spotCoeffs));
-            glUniform3fv(spotDirLoc, 1, glm::value_ptr(spotDir));
-            break;
-        default:
-            cposLoc = glGetUniformLocation(dirLight.ID, "cpos");
-            viewLoc = glGetUniformLocation(dirLight.ID, "view");
-            modelLoc = glGetUniformLocation(dirLight.ID, "model");
-            normLoc = glGetUniformLocation(dirLight.ID, "normal");
-            lvecLoc = glGetUniformLocation(dirLight.ID, "lvec");
-            glUniform3fv(lvecLoc, 1, glm::value_ptr(lVec));
-            break;
-        }
-
-        glUniform4fv(cposLoc, 1, glm::value_ptr(cameraPos));
+        // retrieve the matrix uniform locations
+        unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
+        unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
+        unsigned int normLoc = glGetUniformLocation(ourShader.ID, "normal");
+        unsigned int cposLoc = glGetUniformLocation(ourShader.ID, "cpos");
+        unsigned int lposLoc = glGetUniformLocation(ourShader.ID, "lpos");
+        unsigned int coeffsLoc = glGetUniformLocation(ourShader.ID, "coeffs");
+        unsigned int spotDirLoc = glGetUniformLocation(ourShader.ID, "ldir");
+        unsigned int spotCoeffsLoc = glGetUniformLocation(ourShader.ID, "coeffsSpot");
+        // pass them to the shaders (3 different ways)
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
-
-        // Cubo 1 ----------------------------------------------------------------------------------------
-        model = glm::translate(model,  glm::vec3(0.0f, 0.0f, -2.0f));
-        normal[0][0] = model[0][0]; normal[0][1] = model[0][1]; normal[0][2] = model[0][2];
-        normal[1][0] = model[1][0]; normal[1][1] = model[1][1]; normal[1][2] = model[1][2];
-        normal[2][0] = model[2][0]; normal[2][1] = model[2][1]; normal[2][2] = model[2][2];
-        normal = glm::transpose(glm::inverse(normal));
-
-        // pass them to the shaders (3 different ways)
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix3fv(normLoc, 1, GL_FALSE, glm::value_ptr(normal));
+        glUniform4fv(cposLoc, 1, glm::value_ptr(cameraPos));
+        glUniform4fv(lposLoc, 1, glm::value_ptr(lPos));
+        glUniform3fv(coeffsLoc, 1, glm::value_ptr(coeffs));
+        glUniform3fv(spotDirLoc, 1, glm::value_ptr(spotDir));
+        glUniform2fv(spotCoeffsLoc, 1, glm::value_ptr(spotCoeffs));
+
 
         // render container
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-
-        // Cubo 2 ----------------------------------------------------------------------------------------
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(1.0f, 0.0f, -3.0f));
-        normal[0][0] = model[0][0]; normal[0][1] = model[0][1]; normal[0][2] = model[0][2];
-        normal[1][0] = model[1][0]; normal[1][1] = model[1][1]; normal[1][2] = model[1][2];
-        normal[2][0] = model[2][0]; normal[2][1] = model[2][1]; normal[2][2] = model[2][2];
-        normal = glm::transpose(glm::inverse(normal));
-        // pass them to the shaders (3 different ways)
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix3fv(normLoc, 1, GL_FALSE, glm::value_ptr(normal));
-
-        // render container
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-
-        // Cubo 3 ----------------------------------------------------------------------------------------
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -3.0f));
-        normal[0][0] = model[0][0]; normal[0][1] = model[0][1]; normal[0][2] = model[0][2];
-        normal[1][0] = model[1][0]; normal[1][1] = model[1][1]; normal[1][2] = model[1][2];
-        normal[2][0] = model[2][0]; normal[2][1] = model[2][1]; normal[2][2] = model[2][2];
-        normal = glm::transpose(glm::inverse(normal));
-        // pass them to the shaders (3 different ways)
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix3fv(normLoc, 1, GL_FALSE, glm::value_ptr(normal));
-
-        // render container
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-
-        // Cubo 4 ----------------------------------------------------------------------------------------
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 1.0f, -3.0f));
-        normal[0][0] = model[0][0]; normal[0][1] = model[0][1]; normal[0][2] = model[0][2];
-        normal[1][0] = model[1][0]; normal[1][1] = model[1][1]; normal[1][2] = model[1][2];
-        normal[2][0] = model[2][0]; normal[2][1] = model[2][1]; normal[2][2] = model[2][2];
-        normal = glm::transpose(glm::inverse(normal));
-        // pass them to the shaders (3 different ways)
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix3fv(normLoc, 1, GL_FALSE, glm::value_ptr(normal));
-
-        // render container
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-
-        // Cubo 5 ----------------------------------------------------------------------------------------
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(1.0f, 1.0f, -3.0f));
-        normal[0][0] = model[0][0]; normal[0][1] = model[0][1]; normal[0][2] = model[0][2];
-        normal[1][0] = model[1][0]; normal[1][1] = model[1][1]; normal[1][2] = model[1][2];
-        normal[2][0] = model[2][0]; normal[2][1] = model[2][1]; normal[2][2] = model[2][2];
-        normal = glm::transpose(glm::inverse(normal));
-        // pass them to the shaders (3 different ways)
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix3fv(normLoc, 1, GL_FALSE, glm::value_ptr(normal));
-
-        // render container
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-
-        // Cubo 6 ----------------------------------------------------------------------------------------
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-1.0f, 1.0f, -3.0f));
-        normal[0][0] = model[0][0]; normal[0][1] = model[0][1]; normal[0][2] = model[0][2];
-        normal[1][0] = model[1][0]; normal[1][1] = model[1][1]; normal[1][2] = model[1][2];
-        normal[2][0] = model[2][0]; normal[2][1] = model[2][1]; normal[2][2] = model[2][2];
-        normal = glm::transpose(glm::inverse(normal));
-        // pass them to the shaders (3 different ways)
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix3fv(normLoc, 1, GL_FALSE, glm::value_ptr(normal));
-
-        // render container
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------

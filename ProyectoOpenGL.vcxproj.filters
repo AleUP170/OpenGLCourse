@@ -50,5 +50,20 @@
     <None Include="Shaders\SpotLight.fs">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\bumpmap.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\parallax.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\bumpmap.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\BumpParallaxLight.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\BumpParallaxLight.vs">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
