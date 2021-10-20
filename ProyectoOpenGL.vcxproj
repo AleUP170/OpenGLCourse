@@ -23,7 +23,12 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shaders\bumpmap.fs" />
+    <None Include="Shaders\bumpmap.vs" />
+    <None Include="Shaders\BumpParallaxLight.fs" />
     <None Include="Shaders\mixTexture.fs" />
+    <None Include="Shaders\parallax.fs" />
+    <None Include="Shaders\BumpParallaxLight.vs" />
     <None Include="Shaders\PointLight.fs" />
     <None Include="Shaders\PointLightAtt.fs" />
     <None Include="Shaders\SpotLight.fs" />

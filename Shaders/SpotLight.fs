@@ -10,8 +10,8 @@ uniform sampler2D texture2;
 
 uniform vec4 lpos;
 uniform vec4 cpos;
-uniform vec3 coeffs;
 
+uniform vec3 coeffs;
 uniform vec3 ldir;
 uniform vec2 coeffsSpot;
 
@@ -25,7 +25,6 @@ void main()
     vec3 norm = normalize(N);
 
     vec3 lightv =normalize(distv);
-
     float cosH = cos(radians(coeffsSpot.x));
     float cosL = cos(radians(coeffsSpot.y));
     float dotL = dot(lightv, ldir);
