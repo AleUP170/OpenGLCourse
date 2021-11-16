@@ -26,11 +26,17 @@
     <None Include="Shaders\bumpmap.fs" />
     <None Include="Shaders\bumpmap.vs" />
     <None Include="Shaders\BumpParallaxLight.fs" />
+    <None Include="Shaders\debug_quad.fs" />
+    <None Include="Shaders\debug_quad.vs" />
     <None Include="Shaders\mixTexture.fs" />
     <None Include="Shaders\parallax.fs" />
     <None Include="Shaders\BumpParallaxLight.vs" />
     <None Include="Shaders\PointLight.fs" />
     <None Include="Shaders\PointLightAtt.fs" />
+    <None Include="Shaders\shadow_mapping.fs" />
+    <None Include="Shaders\shadow_mapping.vs" />
+    <None Include="Shaders\shadow_mapping_depth.fs" />
+    <None Include="Shaders\shadow_mapping_depth.vs" />
     <None Include="Shaders\SpotLight.fs" />
     <None Include="Shaders\texture.fs" />
     <None Include="Shaders\texture.vs" />

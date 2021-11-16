@@ -65,5 +65,23 @@
     <None Include="Shaders\BumpParallaxLight.vs">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\shadow_mapping.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\shadow_mapping.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\debug_quad.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\debug_quad.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\shadow_mapping_depth.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\shadow_mapping_depth.vs">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
